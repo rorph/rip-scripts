@@ -14,16 +14,18 @@ if [ ! -e "$OUTPUT_PATH" ] ; then
 fi
 
 # for i in $(cat list.txt | sort -R | tail -n1000) ; do nohup ./fetch.sh $i > /tmp/nohup.out 2>&1 & done
+# for i in $(cat list.txt | sort -R | tail -n10) ; do ./fetch.sh $i &> /dev/null & done
 
 while true; do
     FN="${OUTPUT_PATH}/$(echo $URL | cut -d'/' -f3 | cut -d':' -f1- | sed 's/[:@]/_/g')_$(date +%y%m%d%H%M%S).mp4"
     DURATION=$((MAX_DURATION - SECONDS))
-    
+    # -movflags +frag_keyframe+empty_moov+faststart
     ffmpeg -thread_queue_size 1024 -i $URL \
-        -t $DURATION -movflags +frag_keyframe+empty_moov+faststart \
-        -frag_duration 60000000 -max_delay 60000000 \
-        -reorder_queue_size 1024 -bufsize 128M \
-        -rtsp_transport tcp -c:v copy $FN
+        -t $DURATION -movflags +frag_keyframe+faststart \
+        -fflags +genpts \
+        -frag_duration 120000000 -max_delay 100000000 \
+        -reorder_queue_size 1024 -bufsize 256M \
+        -rtsp_transport tcp -c:v copy -nostdin $FN
     
     if [ "$SECONDS" -lt "$MAX_DURATION" ] ; then
         sleep 1
